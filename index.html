@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>改進的頁面比較工具</title>
+    <style>
+        #comparison {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .page-content {
+            border: 1px solid #ccc;
+            margin: 10px;
+            padding: 10px;
+            max-width: 45%;
+        }
+    </style>
+</head>
+<body>
+    <h1>改進的頁面比較工具</h1>
+    <div>
+        <label>選擇頁面進行比較：</label>
+        <select id="pageSelector" multiple>
+            <option value="L1.html">L1.html</option>
+            <!-- 可以根據需要添加更多選項 -->
+        </select>
+        <button onclick="comparePagesA1()">比較 a1</button>
+        <button onclick="comparePagesA2()">比較 a2</button>
+    </div>
+    <div id="comparison"></div>
+
+    <script>
+        async function loadPage(url) {
+            try {
+                const response = await fetch(url);
+                const html = await response.text();
+                const parser = new DOMParser();
+                return parser.parseFromString(html, 'text/html');
+            } catch (error) {
+                console.error(`加載頁面 ${url} 時發生錯誤:`, error);
+                return null;
+            }
+        }
+
+        async function comparePages(divId) {
+            const comparisonDiv = document.getElementById('comparison');
+            comparisonDiv.innerHTML = ''; // 清空之前的比較結果
+
+            const selectedPages = Array.from(document.getElementById('pageSelector').selectedOptions).map(option => option.value);
+
+            for (const page of selectedPages) {
+                const doc = await loadPage(page);
+                if (!doc) continue;
+
+                const content = doc.querySelector(`#${divId}`);
+                
+                if (content) {
+                    const pageContent = document.createElement('div');
+                    pageContent.className = 'page-content';
+                    pageContent.innerHTML = `<h2>${page} - ${divId}</h2>` + content.innerHTML;
+                    comparisonDiv.appendChild(pageContent);
+                } else {
+                    console.warn(`在 ${page} 中找不到 id 為 ${divId} 的元素`);
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'page-content';
+                    errorDiv.innerHTML = `<h2>${page}</h2><p>找不到 id 為 ${divId} 的元素</p>`;
+                    comparisonDiv.appendChild(errorDiv);
+                }
+            }
+        }
+
+        function comparePagesA1() {
+            comparePages('a1');
+        }
+
+        function comparePagesA2() {
+            comparePages('a2');
+        }
+    </script>
+</body>
+</html>
