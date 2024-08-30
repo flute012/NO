@@ -37,37 +37,44 @@
 
     <script>
     async function viewOrComparePages() {
-        const selectedPages = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
-        const compareElement = document.querySelector('input[name="compareElement"]:checked').value;
-        const resultArea = document.getElementById('resultArea');
-        resultArea.innerHTML = '';
+    const selectedPages = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+    const compareElement = document.querySelector('input[name="compareElement"]:checked').value;
+    const resultArea = document.getElementById('resultArea');
+    resultArea.innerHTML = '';
 
-        if (selectedPages.length === 0) {
-            alert('請至少選擇一個頁面');
-            return;
-        }
+    if (selectedPages.length === 0) {
+        alert('請至少選擇一個頁面');
+        return;
+    }
 
-        for (const page of selectedPages) {
-            try {
-                const response = await fetch(page);
-                const html = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const content = doc.getElementById(compareElement)?.innerHTML || '未找到指定元素';
-                
-                const contentDiv = document.createElement('div');
-                contentDiv.className = 'comparison-content';
-                contentDiv.innerHTML = `<h3>${page} 中的 #${compareElement} 內容：</h3><div>${content}</div>`;
-                resultArea.appendChild(contentDiv);
-            } catch (error) {
-                console.error(`無法載入 ${page}:`, error);
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'comparison-content';
-                errorDiv.innerHTML = `<h3>錯誤：無法載入 ${page}</h3>`;
-                resultArea.appendChild(errorDiv);
+    for (const page of selectedPages) {
+        try {
+            const response = await fetch(page);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const content = doc.getElementById(compareElement)?.innerHTML;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'comparison-content';
+            if (content) {
+                contentDiv.innerHTML = `<h3>${page} 中的 #${compareElement} 內容：</h3><div>${content}</div>`;
+            } else {
+                contentDiv.innerHTML = `<h3>${page} 中未找到 #${compareElement} 元素</h3>`;
+            }
+            resultArea.appendChild(contentDiv);
+        } catch (error) {
+            console.error(`無法載入 ${page}:`, error);
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'comparison-content';
+            errorDiv.innerHTML = `<h3>錯誤：無法載入 ${page}</h3><p>錯誤詳情：${error.message}</p>`;
+            resultArea.appendChild(errorDiv);
         }
     }
+}
     </script>
 </body>
 </html>
