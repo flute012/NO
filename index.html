@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>改進的頁面比較工具</title>
+    <title>改進的文件比較工具</title>
     <style>
         #comparison {
             display: flex;
@@ -13,70 +13,90 @@
             border: 1px solid #ccc;
             margin: 10px;
             padding: 10px;
-            max-width: 45%;
+            width: calc(50% - 22px);
+            overflow-x: auto;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
     </style>
 </head>
 <body>
-    <h1>改進的頁面比較工具</h1>
+    <h1>改進的文件比較工具</h1>
     <div>
-        <label>選擇頁面進行比較：</label>
-        <select id="pageSelector" multiple>
+        <label for="fileSelect">選擇要比較的文件：</label>
+        <select id="fileSelect" multiple>
             <option value="L1.html">L1.html</option>
             <option value="L2.html">L2.html</option>
             <!-- 可以根據需要添加更多選項 -->
         </select>
-        <button onclick="comparePagesA1()">比較 a1</button>
-        <button onclick="comparePagesA2()">比較 a2</button>
+    </div>
+    <div>
+        <label for="elementSelect">選擇要比較的元素：</label>
+        <select id="elementSelect">
+            <option value="a1">a1</option>
+            <option value="a2">a2</option>
+        </select>
+        <button onclick="compareElements()">比較</button>
     </div>
     <div id="comparison"></div>
 
     <script>
-        async function loadPage(url) {
+        let loadedFiles = {};
+
+        async function loadFile(fileName) {
+            if (loadedFiles[fileName]) {
+                return loadedFiles[fileName];
+            }
             try {
-                const response = await fetch(url);
-                const html = await response.text();
-                const parser = new DOMParser();
-                return parser.parseFromString(html, 'text/html');
+                const response = await fetch(fileName);
+                const content = await response.text();
+                loadedFiles[fileName] = content;
+                return content;
             } catch (error) {
-                console.error(`加載頁面 ${url} 時發生錯誤:`, error);
+                console.error(`無法載入文件 ${fileName}:`, error);
                 return null;
             }
         }
 
-        async function comparePages(divId) {
+        async function compareElements() {
+            const fileSelect = document.getElementById('fileSelect');
+            const elementSelect = document.getElementById('elementSelect');
             const comparisonDiv = document.getElementById('comparison');
-            comparisonDiv.innerHTML = ''; // 清空之前的比較結果
+            const selectedFiles = Array.from(fileSelect.selectedOptions).map(option => option.value);
+            const selectedElement = elementSelect.value;
 
-            const selectedPages = Array.from(document.getElementById('pageSelector').selectedOptions).map(option => option.value);
+            comparisonDiv.innerHTML = '';
 
-            for (const page of selectedPages) {
-                const doc = await loadPage(page);
-                if (!doc) continue;
+            for (const fileName of selectedFiles) {
+                const content = await loadFile(fileName);
+                if (!content) continue;
 
-                const content = doc.querySelector(`#${divId}`);
-                
-                if (content) {
-                    const pageContent = document.createElement('div');
-                    pageContent.className = 'page-content';
-                    pageContent.innerHTML = `<h2>${page} - ${divId}</h2>` + content.innerHTML;
-                    comparisonDiv.appendChild(pageContent);
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(content, 'text/html');
+                const element = doc.getElementById(selectedElement);
+
+                const pageContent = document.createElement('div');
+                pageContent.className = 'page-content';
+
+                if (element) {
+                    pageContent.innerHTML = `<h2>${fileName} - ${selectedElement}</h2><pre>${escapeHTML(element.outerHTML)}</pre>`;
                 } else {
-                    console.warn(`在 ${page} 中找不到 id 為 ${divId} 的元素`);
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'page-content';
-                    errorDiv.innerHTML = `<h2>${page}</h2><p>找不到 id 為 ${divId} 的元素</p>`;
-                    comparisonDiv.appendChild(errorDiv);
+                    pageContent.innerHTML = `<h2>${fileName}</h2><p>找不到 id 為 ${selectedElement} 的元素</p>`;
                 }
+
+                comparisonDiv.appendChild(pageContent);
             }
         }
 
-        function comparePagesA1() {
-            comparePages('a1');
-        }
-
-        function comparePagesA2() {
-            comparePages('a2');
+        function escapeHTML(html) {
+            return html
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
     </script>
 </body>
