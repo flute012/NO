@@ -3,101 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>改進的文件比較工具</title>
+    <title>頁面查看與比較</title>
     <style>
-        #comparison {
-            display: flex;
-            flex-wrap: wrap;
-        }
-        .page-content {
-            border: 1px solid #ccc;
-            margin: 10px;
-            padding: 10px;
-            width: calc(50% - 22px);
-            overflow-x: auto;
-        }
-        pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
+        .comparison-content { margin-bottom: 20px; }
     </style>
 </head>
 <body>
-    <h1>改進的文件比較工具</h1>
+    <h1>頁面查看與比較</h1>
+    
     <div>
-        <label for="fileSelect">選擇要比較的文件：</label>
-        <select id="fileSelect" multiple>
-            <option value="L1.html">L1.html</option>
-            <option value="L2.html">L2.html</option>
-            <!-- 可以根據需要添加更多選項 -->
-        </select>
+        <h2>選擇要查看或比較的頁面：</h2>
+        <input type="checkbox" id="page1" value="1.html">
+        <label for="page1">1.html</label>
+        <input type="checkbox" id="page2" value="2.html">
+        <label for="page2">2.html</label>
+        <input type="checkbox" id="page3" value="3.html">
+        <label for="page3">3.html</label>
+        <input type="checkbox" id="page4" value="4.html">
+        <label for="page4">4.html</label>
     </div>
+    
     <div>
-        <label for="elementSelect">選擇要比較的元素：</label>
-        <select id="elementSelect">
-            <option value="a1">a1</option>
-            <option value="a2">a2</option>
-        </select>
-        <button onclick="compareElements()">比較</button>
+        <h2>選擇要查看的元素：</h2>
+        <input type="radio" id="compareA1" name="compareElement" value="a1" checked>
+        <label for="compareA1">查看 &lt;div id="a1"&gt;</label>
+        <input type="radio" id="compareA2" name="compareElement" value="a2">
+        <label for="compareA2">查看 &lt;div id="a2"&gt;</label>
     </div>
-    <div id="comparison"></div>
+    
+    <button onclick="viewOrComparePages()">查看/比較</button>
+    
+    <div id="resultArea"></div>
 
     <script>
-        let loadedFiles = {};
+    async function viewOrComparePages() {
+        const selectedPages = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        const compareElement = document.querySelector('input[name="compareElement"]:checked').value;
+        const resultArea = document.getElementById('resultArea');
+        resultArea.innerHTML = '';
 
-        async function loadFile(fileName) {
-            if (loadedFiles[fileName]) {
-                return loadedFiles[fileName];
-            }
+        if (selectedPages.length === 0) {
+            alert('請至少選擇一個頁面');
+            return;
+        }
+
+        for (const page of selectedPages) {
             try {
-                const response = await fetch(fileName);
-                const content = await response.text();
-                loadedFiles[fileName] = content;
-                return content;
-            } catch (error) {
-                console.error(`無法載入文件 ${fileName}:`, error);
-                return null;
-            }
-        }
-
-        async function compareElements() {
-            const fileSelect = document.getElementById('fileSelect');
-            const elementSelect = document.getElementById('elementSelect');
-            const comparisonDiv = document.getElementById('comparison');
-            const selectedFiles = Array.from(fileSelect.selectedOptions).map(option => option.value);
-            const selectedElement = elementSelect.value;
-
-            comparisonDiv.innerHTML = '';
-
-            for (const fileName of selectedFiles) {
-                const content = await loadFile(fileName);
-                if (!content) continue;
-
+                const response = await fetch(page);
+                const html = await response.text();
                 const parser = new DOMParser();
-                const doc = parser.parseFromString(content, 'text/html');
-                const element = doc.getElementById(selectedElement);
-
-                const pageContent = document.createElement('div');
-                pageContent.className = 'page-content';
-
-                if (element) {
-                    pageContent.innerHTML = `<h2>${fileName} - ${selectedElement}</h2><pre>${escapeHTML(element.outerHTML)}</pre>`;
-                } else {
-                    pageContent.innerHTML = `<h2>${fileName}</h2><p>找不到 id 為 ${selectedElement} 的元素</p>`;
-                }
-
-                comparisonDiv.appendChild(pageContent);
+                const doc = parser.parseFromString(html, 'text/html');
+                const content = doc.getElementById(compareElement)?.innerHTML || '未找到指定元素';
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'comparison-content';
+                contentDiv.innerHTML = `<h3>${page} 中的 #${compareElement} 內容：</h3><div>${content}</div>`;
+                resultArea.appendChild(contentDiv);
+            } catch (error) {
+                console.error(`無法載入 ${page}:`, error);
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'comparison-content';
+                errorDiv.innerHTML = `<h3>錯誤：無法載入 ${page}</h3>`;
+                resultArea.appendChild(errorDiv);
             }
         }
-
-        function escapeHTML(html) {
-            return html
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        }
+    }
     </script>
 </body>
 </html>
