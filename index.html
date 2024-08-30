@@ -36,8 +36,11 @@
     <div id="resultArea"></div>
 
     <script>
-    async function viewOrComparePages() {
-    const selectedPages = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+async function viewOrComparePages() {
+    const selectedPages = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => {
+        // 將選中的頁面名稱從 "1.html" 轉換為 "L1.html"
+        return cb.value.replace(/^(\d+)\.html$/, 'L$1.html');
+    });
     const compareElement = document.querySelector('input[name="compareElement"]:checked').value;
     const resultArea = document.getElementById('resultArea');
     resultArea.innerHTML = '';
@@ -49,11 +52,14 @@
 
     for (const page of selectedPages) {
         try {
+            console.log(`嘗試載入頁面: ${page}`); // 調試信息
             const response = await fetch(page);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const html = await response.text();
+            console.log(`成功載入頁面 ${page}, 內容長度: ${html.length}`); // 調試信息
+            
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             const content = doc.getElementById(compareElement)?.innerHTML;
@@ -62,8 +68,10 @@
             contentDiv.className = 'comparison-content';
             if (content) {
                 contentDiv.innerHTML = `<h3>${page} 中的 #${compareElement} 內容：</h3><div>${content}</div>`;
+                console.log(`找到 #${compareElement} 元素，內容長度: ${content.length}`); // 調試信息
             } else {
                 contentDiv.innerHTML = `<h3>${page} 中未找到 #${compareElement} 元素</h3>`;
+                console.log(`在 ${page} 中未找到 #${compareElement} 元素`); // 調試信息
             }
             resultArea.appendChild(contentDiv);
         } catch (error) {
@@ -75,6 +83,14 @@
         }
     }
 }
+
+// 更新複選框的值
+document.addEventListener('DOMContentLoaded', () => {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+        cb.value = cb.value.replace(/^(\d+)\.html$/, 'L$1.html');
+    });
+});
     </script>
 </body>
 </html>
